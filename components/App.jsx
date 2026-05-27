@@ -333,7 +333,6 @@ export default function App() {
   const [rootId, setRootId] = useState(SMALL_AIRPLANE_ENGINE.rootId);
   const [mode, setMode] = useState("prob");
   const [mcNumRuns, setMcNumRuns] = useState(100);
-  const [showInfo, setShowInfo] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importJson, setImportJson] = useState("");
   const [audioEnabled, setAudioEnabled] = useState(true);
@@ -557,31 +556,23 @@ export default function App() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <button onClick={() => setAudioEnabled((v) => !v)} style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid #d1d5db", background: audioEnabled ? "#eff6ff" : "#f9fafb", color: audioEnabled ? "#1d4ed8" : "#6b7280", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-              <img src="/acoustiTreeLogo.png" alt="Logo" style={{ width: 24, height: 24, objectFit: "contain", marginRight: 4 }} />
-              {audioEnabled ? "🔊 Audio On" : "🔇 Visual Only"}
-            </button>
-            <button onClick={() => setShowInfo(!showInfo)} style={S.iconBtn}>{showInfo ? "✕" : "?"}</button>
+            <div style={{ display: "flex", border: "1px solid #d1d5db", borderRadius: 7, overflow: "hidden" }}>
+              <button
+                onClick={() => setAudioEnabled(false)}
+                style={{ padding: "4px 12px", border: "none", borderRight: "1px solid #d1d5db", background: !audioEnabled ? "#f1f5f9" : "#fff", color: !audioEnabled ? "#1e40af" : "#6b7280", fontSize: 12, fontWeight: !audioEnabled ? 700 : 600, cursor: "pointer" }}
+              >
+                👁 Visual Only
+              </button>
+              <button
+                onClick={() => setAudioEnabled(true)}
+                style={{ padding: "4px 12px", border: "none", background: audioEnabled ? "#eff6ff" : "#fff", color: audioEnabled ? "#1d4ed8" : "#6b7280", fontSize: 12, fontWeight: audioEnabled ? 700 : 600, cursor: "pointer" }}
+              >
+                🔊 AudioVisual
+              </button>
+            </div>
           </div>
         </div>
       </header>
-
-      {showInfo && (
-        <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 16px", zIndex: 19 }}>
-          <div style={{ maxWidth: 900, margin: "0 auto", fontSize: 12, color: "#4b5563", lineHeight: 1.6 }}>
-            <p style={{ margin: "0 0 6px", fontWeight: 700, color: "#111827", fontSize: 13 }}>How Fault Trees Work</p>
-            <p style={{ margin: "0 0 6px" }}>A Fault Tree models how component failures propagate to system failure through logic gates.</p>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "6px 0" }}>
-              {[["AND", "#dc2626", "Fails if ALL children fail"], ["OR", "#ea580c", "Fails if ANY child fails"], ["k/N", "#7c3aed", "Fails if k out of N fail"]].map(([t, c, d]) => (
-                <span key={t} style={{ background: "#f9fafb", padding: "3px 8px", borderRadius: 4, border: "1px solid #e5e7eb", fontSize: 11 }}>
-                  <span style={{ background: c, color: "#fff", padding: "1px 6px", borderRadius: 3, fontWeight: 800, fontSize: 10, fontFamily: "monospace", marginRight: 4 }}>{t}</span>{d}
-                </span>
-              ))}
-            </div>
-            <p style={{ margin: 0 }}><b>Monte Carlo</b> animates each simulation run one by one — watch the dots fill up. <b>Probabilistic</b> shows exact calculated values.</p>
-          </div>
-        </div>
-      )}
 
       {/* TOOLBAR */}
       <div style={S.toolbar}>
@@ -590,40 +581,12 @@ export default function App() {
           {Object.entries(TREES).map(([k, v]) => (
             <button key={k} style={treeKey === k ? { ...S.btn, ...S.btnOn } : S.btn} onClick={() => switchTree(k)}>{v.name}</button>
           ))}
-          <button style={S.btn} onClick={() => setShowImport(true)}>+ Import</button>
         </div>
         <div style={S.sep} />
         <div style={S.tg}>
           <span style={S.tl}>Mode</span>
           <button style={mode === "prob" ? { ...S.btn, ...S.btnOn } : S.btn} onClick={() => { setMode("prob"); resetMC(); }}>Probabilistic</button>
-          <button style={mode === "mc" ? { ...S.btn, ...S.btnOn } : S.btn} onClick={() => { setMode("mc"); resetMC(); }}>Monte Carlo</button>
         </div>
-        {isMC && (
-          <>
-            <div style={S.sep} />
-            <div style={S.tg}>
-              <span style={S.tl}>Runs</span>
-              <select style={S.sel} value={mcNumRuns} onChange={(e) => { setMcNumRuns(+e.target.value); resetMC(); }}>
-                {[50, 100, 200, 500].map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
-              <span style={S.tl}>Speed</span>
-              <select style={S.sel} value={animSpeed} onChange={(e) => setAnimSpeed(+e.target.value)}>
-                {[[200, "Slow"], [80, "Normal"], [30, "Fast"], [5, "Instant"]].map(([v, l]) => (
-                  <option key={v} value={v}>{l}</option>
-                ))}
-              </select>
-              {!isAnimating ? (
-                <button style={{ ...S.btn, background: "#16a34a", color: "#fff", borderColor: "#15803d" }} onClick={startMC}>▶ {allRuns ? "Restart" : "Run"}</button>
-              ) : (
-                <button style={{ ...S.btn, background: "#dc2626", color: "#fff", borderColor: "#b91c1c" }} onClick={stopAnim}>⏸ Pause</button>
-              )}
-              {allRuns && !isAnimating && visibleRuns < allRuns.length && (
-                <button style={{ ...S.btn, background: "#2563eb", color: "#fff", borderColor: "#1d4ed8" }} onClick={() => setIsAnimating(true)}>▶ Resume</button>
-              )}
-              {allRuns && <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "monospace", color: "#374151", marginLeft: 4 }}>{visibleRuns}/{allRuns.length}</span>}
-            </div>
-          </>
-        )}
         <div style={{ flex: 1 }} />
         <button style={S.btn} onClick={resetProbs}>Reset P=0.5</button>
       </div>

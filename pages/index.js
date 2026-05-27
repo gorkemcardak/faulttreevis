@@ -37,7 +37,7 @@ function calcProb(node, nm) {
   for (let f = 0; f < node.k; f++) pOk += combP(cp, f);
   return 1 - pOk;
 }
-/**
+/*
  * combP — probability that exactly nf out of N components fail.
  * Used by the k/N gate to sum over all failure combinations.
  */
@@ -286,26 +286,6 @@ function GateVis({ node, cx, cy, prob, mcData, visibleCount, isMC, totalRuns }) 
 
       {/* Outline */}
       <path d={pathD} fill="none" stroke="#374151" strokeWidth="2.5" strokeLinejoin="round" />
-
-      {/* Type + val */}
-      {!isMC && (
-        <>
-          <text x={cx} y={cy - 2} textAnchor="middle" fill="#1f2937" fontSize="15" fontWeight="900" fontFamily="monospace" opacity="0.85">
-            {node.gateType === "KN" ? `k/N` : node.gateType}
-          </text>
-          <text x={cx} y={cy + 15} textAnchor="middle" fill="#1f2937" fontSize="12" fontWeight="700" fontFamily="monospace" opacity="0.7">
-            {prob.toFixed(2)}
-          </text>
-        </>
-      )}
-
-      {/* R= P= */}
-      {isMC && mcR !== null && (
-        <g>
-          <text x={r + 8} y={cy - 4} textAnchor="start" fill="#111827" fontSize="15" fontWeight="800" fontFamily="monospace">R={mcR.toFixed(2)}</text>
-          <text x={r + 8} y={cy + 14} textAnchor="start" fill="#9ca3af" fontSize="12" fontWeight="600" fontFamily="monospace">P={prob.toFixed(2)}</text>
-        </g>
-      )}
     </g>
   );
 }
@@ -403,7 +383,6 @@ function BasicEventVis({ node, x, y, w, h, prob, isMC, mcData, visibleCount, tot
           {/* Bar */}
           <rect x={barX} y={cY + 8} width={barW * currentProb} height={34} rx="4" fill="#f87171" />
           <rect x={barX + barW * currentProb} y={cY + 8} width={barW * (1 - currentProb)} height={34} rx="4" fill="#4ade80" />
-          <text x={x} y={cY + 30} textAnchor="middle" fill="#111827" fontSize="16" fontWeight="800" fontFamily="monospace">{currentProb.toFixed(2)}</text>
         </g>
       )}
 
@@ -412,8 +391,6 @@ function BasicEventVis({ node, x, y, w, h, prob, isMC, mcData, visibleCount, tot
       <rect x={barX} y={sliderY} width={barW * currentProb} height="5" rx="2.5" fill="#3b82f6" />
       <circle cx={barX + barW * currentProb} cy={sliderY + 2.5} r="8" fill="#3b82f6" stroke="#fff" strokeWidth="2.5"
         style={{ cursor: "pointer", filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.3))" }} />
-
-      <text x={x} y={sliderY + 22} textAnchor="middle" fill="#6b7280" fontSize="12" fontWeight="700" fontFamily="monospace">P={currentProb.toFixed(2)}</text>
 
       {/* Drag area */}
       <rect x={barX - 10} y={sliderY - 12} width={barW + 20} height="30" fill="transparent" style={{ cursor: "pointer" }}
@@ -438,14 +415,18 @@ function BasicEventVis({ node, x, y, w, h, prob, isMC, mcData, visibleCount, tot
  */
 function SankeyLine({ x1, y1, x2, y2, prob }) {
   const thickness = Math.max(4, prob * 22);
-  const alpha = 0.15 + prob * 0.45;
+  // Interpolate from pale pink (248,180,180) at prob=0 → deep crimson (180,10,10) at prob=1
+  const r = Math.round(248 - prob * 68);
+  const g = Math.round(180 - prob * 170);
+  const b = Math.round(180 - prob * 170);
+  const alpha = 0.18 + prob * 0.82;
   const cp1y = y1 + (y2 - y1) * 0.38;
   const cp2y = y1 + (y2 - y1) * 0.62;
   return (
     <path
       d={`M${x1} ${y1} C${x1} ${cp1y}, ${x2} ${cp2y}, ${x2} ${y2}`}
       fill="none"
-      stroke={`rgba(248,113,113,${alpha})`}
+      stroke={`rgba(${r},${g},${b},${alpha})`}
       strokeWidth={thickness}
       strokeLinecap="round"
     />
@@ -488,12 +469,11 @@ export default function App() {
   const [mcNumRuns, setMcNumRuns] = useState(100);
 
   // ── UI panel visibility ──
-  const [showInfo, setShowInfo] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importJson, setImportJson] = useState("");
 
   // ── Audio on/off toggle state ──
-  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [audioEnabled, setAudioEnabled] = useState(false);
 
   // ── Monte Carlo simulation data and animation state ──
   const [allRuns, setAllRuns] = useState(null);       // pre-computed run results
@@ -537,7 +517,7 @@ export default function App() {
     audioContext.current = ctx;
 
     const master = ctx.createGain();
-    master.gain.value = 0.5;
+    master.gain.value = audioEnabled ? 0.5 : 0;
     master.connect(ctx.destination);
     masterGain.current = master;
 
@@ -1004,30 +984,23 @@ export default function App() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <button onClick={() => setAudioEnabled((v) => !v)} style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid #d1d5db", background: audioEnabled ? "#eff6ff" : "#f9fafb", color: audioEnabled ? "#1d4ed8" : "#6b7280", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-              {audioEnabled ? "🔊 Audio On" : "🔇 Visual Only"}
-            </button>
-            <button onClick={() => setShowInfo(!showInfo)} style={S.iconBtn}>{showInfo ? "✕" : "?"}</button>
+            <div style={{ display: "flex", border: "1px solid #d1d5db", borderRadius: 7, overflow: "hidden" }}>
+              <button
+                onClick={() => setAudioEnabled(false)}
+                style={{ padding: "4px 12px", border: "none", borderRight: "1px solid #d1d5db", background: !audioEnabled ? "#f1f5f9" : "#fff", color: !audioEnabled ? "#1e40af" : "#6b7280", fontSize: 12, fontWeight: !audioEnabled ? 700 : 600, cursor: "pointer" }}
+              >
+                👁 Visual Only
+              </button>
+              <button
+                onClick={() => setAudioEnabled(true)}
+                style={{ padding: "4px 12px", border: "none", background: audioEnabled ? "#eff6ff" : "#fff", color: audioEnabled ? "#1d4ed8" : "#6b7280", fontSize: 12, fontWeight: audioEnabled ? 700 : 600, cursor: "pointer" }}
+              >
+                🔊 AudioVisual
+              </button>
+            </div>
           </div>
         </div>
       </header>
-
-      {showInfo && (
-        <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "12px 16px", zIndex: 19 }}>
-          <div style={{ maxWidth: 900, margin: "0 auto", fontSize: 12, color: "#4b5563", lineHeight: 1.6 }}>
-            <p style={{ margin: "0 0 6px", fontWeight: 700, color: "#111827", fontSize: 13 }}>How Fault Trees Work</p>
-            <p style={{ margin: "0 0 6px" }}>A Fault Tree models how component failures propagate to system failure through logic gates.</p>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "6px 0" }}>
-              {[["AND", "#dc2626", "Fails if ALL children fail"], ["OR", "#ea580c", "Fails if ANY child fails"], ["k/N", "#7c3aed", "Fails if k out of N fail"]].map(([t, c, d]) => (
-                <span key={t} style={{ background: "#f9fafb", padding: "3px 8px", borderRadius: 4, border: "1px solid #e5e7eb", fontSize: 11 }}>
-                  <span style={{ background: c, color: "#fff", padding: "1px 6px", borderRadius: 3, fontWeight: 800, fontSize: 10, fontFamily: "monospace", marginRight: 4 }}>{t}</span>{d}
-                </span>
-              ))}
-            </div>
-            <p style={{ margin: 0 }}><b>Monte Carlo</b> animates each simulation run one by one — watch the dots fill up. <b>Probabilistic</b> shows exact calculated values.</p>
-          </div>
-        </div>
-      )}
 
       {/* TOOLBAR */}
       <div style={S.toolbar}>
@@ -1036,40 +1009,12 @@ export default function App() {
           {Object.entries(TREES).map(([k, v]) => (
             <button key={k} style={treeKey === k ? { ...S.btn, ...S.btnOn } : S.btn} onClick={() => switchTree(k)}>{v.name}</button>
           ))}
-          <button style={S.btn} onClick={() => setShowImport(true)}>+ Import</button>
         </div>
         <div style={S.sep} />
         <div style={S.tg}>
           <span style={S.tl}>Mode</span>
           <button style={mode === "prob" ? { ...S.btn, ...S.btnOn } : S.btn} onClick={() => { setMode("prob"); resetMC(); }}>Probabilistic</button>
-          <button style={mode === "mc" ? { ...S.btn, ...S.btnOn } : S.btn} onClick={() => { setMode("mc"); resetMC(); }}>Monte Carlo</button>
         </div>
-        {isMC && (
-          <>
-            <div style={S.sep} />
-            <div style={S.tg}>
-              <span style={S.tl}>Runs</span>
-              <select style={S.sel} value={mcNumRuns} onChange={(e) => { setMcNumRuns(+e.target.value); resetMC(); }}>
-                {[50, 100, 200, 500].map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
-              <span style={S.tl}>Speed</span>
-              <select style={S.sel} value={animSpeed} onChange={(e) => setAnimSpeed(+e.target.value)}>
-                {[[200, "Slow"], [80, "Normal"], [30, "Fast"], [5, "Instant"]].map(([v, l]) => (
-                  <option key={v} value={v}>{l}</option>
-                ))}
-              </select>
-              {!isAnimating ? (
-                <button style={{ ...S.btn, background: "#16a34a", color: "#fff", borderColor: "#15803d" }} onClick={startMC}>▶ {allRuns ? "Restart" : "Run"}</button>
-              ) : (
-                <button style={{ ...S.btn, background: "#dc2626", color: "#fff", borderColor: "#b91c1c" }} onClick={stopAnim}>⏸ Pause</button>
-              )}
-              {allRuns && !isAnimating && visibleRuns < allRuns.length && (
-                <button style={{ ...S.btn, background: "#2563eb", color: "#fff", borderColor: "#1d4ed8" }} onClick={() => setIsAnimating(true)}>▶ Resume</button>
-              )}
-              {allRuns && <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "monospace", color: "#374151", marginLeft: 4 }}>{visibleRuns}/{allRuns.length}</span>}
-            </div>
-          </>
-        )}
         <div style={{ flex: 1 }} />
         <button style={S.btn} onClick={resetProbs}>Reset P=0.5</button>
       </div>
@@ -1123,29 +1068,12 @@ export default function App() {
           })}
         </svg>
 
-        {/* HUD */}
-        <div style={S.hud}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>System Failure</div>
-          <div style={{ fontSize: 26, fontWeight: 900, fontFamily: "monospace", color: "#111827", letterSpacing: -1 }}>P={topP.toFixed(4)}</div>
-          <div style={S.hudBar}><div style={{ height: "100%", borderRadius: 2, background: "#dc2626", transition: "width 0.15s", width: `${topP * 100}%` }} /></div>
-          {showMC && topMCR !== null && visibleRuns > 0 && (
-            <>
-              <div style={{ fontSize: 17, fontWeight: 800, fontFamily: "monospace", color: "#ea580c", marginTop: 4 }}>R={topMCR.toFixed(4)}</div>
-              <div style={S.hudBar}><div style={{ height: "100%", borderRadius: 2, background: "#ea580c", transition: "width 0.15s", width: `${topMCR * 100}%` }} /></div>
-              <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2, fontFamily: "monospace" }}>{mcPerNode[rootId].failures}/{visibleRuns} failed</div>
-            </>
-          )}
-          <div style={{ display: "flex", gap: 10, marginTop: 8, fontSize: 11, color: "#6b7280" }}>
-            <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#22c55e", marginRight: 3, verticalAlign: "middle" }} />OK</span>
-            <span><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#dc2626", marginRight: 3, verticalAlign: "middle" }} />Fail</span>
-          </div>
-        </div>
-
         <div style={S.zoom}>
           <button style={S.zBtn} onClick={() => setTransform((t) => ({ ...t, scale: Math.min(5, t.scale * 1.25) }))}>+</button>
           <button style={S.zBtn} onClick={() => setTransform((t) => ({ ...t, scale: Math.max(0.15, t.scale / 1.25) }))}>−</button>
           <button style={S.zBtn} onClick={() => setTransform({ x: 0, y: 0, scale: 1 })}>⌂</button>
         </div>
+
       </div>
 
       {/* IMPORT */}
